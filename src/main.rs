@@ -1,7 +1,7 @@
 extern crate url;
 
-use std::old_io as io;
-use std::string::String;
+use std::io;
+use std::io::prelude::*;
 
 enum ParseOption {
     HostName,
@@ -15,11 +15,11 @@ enum ParseOption {
 }
 
 fn fail(message: Option<&str>) {
-    std::env::set_exit_status(1);
     match message {
         Some(m) => println!("{}", m),
         None    => {}
     };
+    std::process::exit(1);
 }
 
 fn print_help() {
@@ -55,7 +55,7 @@ fn get_parse_option(arg: &str) -> ParseOption {
 }
 
 fn get_url_from_stdin() -> Result<String, String> {
-    let mut stdin     = io::stdin();
+    let stdin         = io::stdin();
     let mut stdin_url = String::new();
 
     // only read the first line
@@ -115,12 +115,12 @@ fn execute(option: &str, url: &str) {
     let value = match get_parse_option(option) {
         ParseOption::HostName => parse_component(parsed.domain(), "hostname"),
         ParseOption::Port     => parse_component(parsed.port(), "port"),
-        ParseOption::Protocol => parse_component(Some(parsed.scheme), "scheme"),
-        ParseOption::Username => parse_component(parsed.username(), "username"),
+        ParseOption::Protocol => parse_component(Some(parsed.scheme()), "scheme"),
+        ParseOption::Username => parse_component(Some(parsed.username()), "username"),
         ParseOption::Password => parse_component(parsed.password(), "password"),
-        ParseOption::Path     => parse_component(parsed.serialize_path(), "path"),
-        ParseOption::Fragment => parse_component(parsed.fragment, "fragment"),
-        ParseOption::Query    => parse_component(parsed.query, "query")
+        ParseOption::Path     => parse_component(Some(parsed.path()), "path"),
+        ParseOption::Fragment => parse_component(parsed.fragment(), "fragment"),
+        ParseOption::Query    => parse_component(parsed.query(), "query")
     };
 
     match value {
@@ -134,7 +134,7 @@ fn execute(option: &str, url: &str) {
 }
 
 fn optional_print_help(option: &str) -> bool {
-    match option.as_slice() {
+    match option {
         "-h" => {
             print_help();
             return true;
@@ -153,12 +153,12 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     match args.as_slice() {
-        [_, ref option]  => match optional_print_help(option.as_slice()) {
+        [_, ref option]  => match optional_print_help(option) {
             false => execute_from_stdin(option),
             _ => {}
         },
 
-        [_, ref option, ref url] => match optional_print_help(option.as_slice()) {
+        [_, ref option, ref url] => match optional_print_help(option) {
             false => execute(option, url),
             _ => execute(option, url)
         },
